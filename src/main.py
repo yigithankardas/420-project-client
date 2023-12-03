@@ -1,76 +1,119 @@
+if __name__ != '__main__':
+    raise ImportError('This module cannot be imported from outside.')
+
 import socket
-import time
+from time import sleep
 import signal
 import sys
-import threading
+from threading import Thread, Lock
 import atomics
 import select
-    
+
 HOST = '127.0.0.1'
 PORT = 5555
 
-control=atomics.atomic(width=4, atype=atomics.INT)
-control.store(0)
-myState="waiting-ID"
+lockSender = atomics.atomic(width=1, atype=atomics.UINT)
+lockSender.store(0)
+cancelSender = atomics.atomic(width=1, atype=atomics.UINT)
+cancelSender.store(0)
+mustQuit = atomics.atomic(width=1, atype=atomics.UINT)
+mustQuit.store(0)
 
-def connectServer(clientSocket, uniqueId):
-    global control
-    print("Enter ID")
+state = 'waiting-id'
+
+
+def sender(clientSocket, uniqueId):
+    global lockSender
+    global cancelSender
+
     while True:
-        if control.load()==0:
-          requestedId = input()
-          if requestedId == "yes" or requestedId == "no":
-             print("Are you sure? yes/no")
-             continue
-          clientSocket.send(requestedId.encode('utf-8'))
-          control.store(1)
+        sleep(0.01)
 
-        else:
-            time.sleep(0.1)
+        if mustQuit.load() == 1:
+            break
 
-def waitingRequest(clientSocket, uniqueId):
-    global control
-    global myState
+        if lockSender.load() == 1:
+            continue
+
+        print('Enter ID: ', end='')
+        requestedId = input()
+        if cancelSender.load() == 0:
+            clientSocket.send(requestedId.encode('utf-8'))
+        lockSender.store(1)
+
+
+def receiver(clientSocket, uniqueId):
+    global lockSender
+    global cancelSender
+    global state
+
     while True:
-      # receive server's response
-      try:
-        response = clientSocket.recv(1024).decode()
-        control.store(1)
-      except:
-          continue
-      if myState == "idle":
-        if response == "-1":
-          print("Could not reach the client")
-          control.store(0)
-        elif response == "0":
-          control.store(0)
-        else:
-          print(f'Do you want to connect {response}? (yes/no)')
-          answer = input()
-          clientSocket.send(answer.encode('utf-8'))
-          if answer == "no":
-             control.store(0)
-      else:
-          time.sleep(0.1)
+        sleep(0.01)
+
+        if mustQuit.load() == 1:
+            lockSender.store(0)
+            cancelSender.store(0)
+            break
+
+        try:
+            response = clientSocket.recv(1024).decode()
+            lockSender.store(1)
+            cancelSender.store(1)
+            print('--> (WILL BE CANCELED)')
+        except:
+            continue
+
+        if response == 'quit':
+            mustQuit.store(1)
+            continue
+
+        if state == 'idle':
+            if response == '-1':
+                print('Could not reach the client')
+                lockSender.store(0)
+
+            elif response == '0':
+                lockSender.store(0)
+
+            else:
+                print(f'Do you want to connect {response}? (yes/no)')
+                answer = input()
+                clientSocket.send(answer.encode('utf-8'))
+                if answer == 'no':
+                    lockSender.store(0)
+
 
 def signalHandler(sig, frame):
-    clientSocket.close()
-    sys.exit(1)
+    try:
+        senderThread.join(2)
+        receiverThread.join(2)
+        clientSocket.close()
+    except:
+        clientSocket.close()
+
+    exit(1)
+
+
 signal.signal(signal.SIGINT, signalHandler)
+
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect((HOST, PORT))
 clientSocket.settimeout(5)
+
+try:
+    uniqueId = int(clientSocket.recv(1024).decode())
+except socket.timeout:
+    print('Timeout occurred. Connection to the server timed out.')
+    exit(1)
+
+state = 'idle'
+print(f'Connected to the server. Assigned ID: {uniqueId}')
+
+args = (clientSocket, uniqueId)
+senderThread = Thread(target=receiver, args=args)
+senderThread.start()
+receiverThread = Thread(target=sender, args=args)
+receiverThread.start()
+
 while True:
-    try:
-        uniqueId = int(clientSocket.recv(1024).decode())
-        myState = "idle"
-        print(f"Connected to the server. Assigned ID: {uniqueId}")
-        waitingRequestThread =threading.Thread(target=waitingRequest, args=(clientSocket, uniqueId))
-        waitingRequestThread.start()
-        connectServerThread = threading.Thread(target=connectServer, args=(clientSocket, uniqueId))
-        connectServerThread.start()
-        break
-    
-    except socket.timeout:
-        print("Timeout occurred. Connection to the server timed out.")
-        break
+    sleep(1)
