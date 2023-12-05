@@ -36,11 +36,11 @@ class Client:
         self.__mustQuit.store(0)
         self.__window = None
         self.__lock = Lock()
-        self.__receiverThread = Thread(target=self.__receiver, args=())
-        self.__receiverThread.start()
         self.__window = ClientWindow()
         self.__window.registerOnClick(lambda event: self.__onClick())
         self.__window.after(500, self.__check)
+        self.__receiverThread = Thread(target=self.__receiver, args=())
+        self.__receiverThread.start()
         self.__window.prepare()
 
     def closeClient(self):
@@ -76,7 +76,6 @@ class Client:
                 message = self.__socket.recv(1024).decode()
                 print(f'[RECEIVER]: Message received: {message}')
             except:
-                print(f'[RECEIVER]: Contd')
                 continue
 
             if message == 'quit':
@@ -87,11 +86,6 @@ class Client:
                 try:
                     self.__id = int(message)
 
-                except socket.timeout:
-                    print(
-                        '[RECEIVER]: Timeout occurred. Connection to the server timed out.')
-                    self.closeClient()
-
                 except:
                     print('[RECEIVER]: Received ID is invalid. Closing the client')
                     self.closeClient()
@@ -99,6 +93,7 @@ class Client:
                 self.__state = 'idle'
                 print(
                     f'[RECEIVER]: Connected to the server. Assigned ID: {self.__id}')
+                self.__window.setIdLabel(self.__id)
 
             elif self.__state == 'idle':
                 if message == '-1':

@@ -33,3 +33,6 @@ class ClientWindow:
     def popup(self, message, timeout):
         return TimeoutPopup(self.__window, 'Confirmation',
                             message, timeout).result()
+
+    def setIdLabel(self, id):
+        self.__idLabel.config(text=f'ID: {id}')
