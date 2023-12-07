@@ -10,16 +10,19 @@ class ClientWindow:
             self.__frame, text='ID: *', bg='black', fg='white')
         self.__entry = Entry(self.__frame)
         self.__button = Button(self.__frame, text='Send Request')
-
-    def prepare(self):
         self.__idLabel.pack()
         self.__entry.pack()
         self.__button.pack()
         self.__frame.pack()
+
+    def mainloop(self):
         self.__window.mainloop()
 
     def destroy(self):
         self.__window.destroy()
+
+    def quit(self):
+        self.__window.quit()
 
     def getEntryText(self):
         return self.__entry.get()
@@ -31,8 +34,10 @@ class ClientWindow:
         self.__button.bind('<Button-1>', function)
 
     def popup(self, message, timeout):
-        return TimeoutPopup(self.__window, 'Confirmation',
-                            message, timeout).result()
+        popup = TimeoutPopup('Confirmation',
+                             message, timeout)
+        popup.mainloop()
+        return popup.result()
 
     def setIdLabel(self, id):
         self.__idLabel.config(text=f'ID: {id}')
