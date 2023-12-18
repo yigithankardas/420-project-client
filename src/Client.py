@@ -82,18 +82,24 @@ class Client:
             print('[WINDOW]: Message could not be sent.')
 
     def __receiver(self):
+        messages = []
         while self.__mustQuit.load() == 0:
             sleep(RECEIVER_THREAD_WAIT)
             print(f'[RECEIVER]: Receiver thread is idle.')
 
             try:
-                message = self.__socket.recv(1024).decode()
-                if message == '':
+                bytes = self.__socket.recv(1024).decode()
+                if bytes == '':
                     continue
 
-                print(f'[RECEIVER]: Message received: {message}')
+                messages += list(filter(None, bytes.split('\0')))
+
+                print(f'[RECEIVER]: Messages received: {messages}')
             except:
-                continue
+                if len(messages) == 0:
+                    continue
+
+            message = messages.pop(0)
 
             if message == 'quit':
                 self.closeClient(informServer=False)
@@ -102,9 +108,9 @@ class Client:
             if self.__state == 'waiting-id':
                 try:
                     self.__id = int(message)
-
                 except:
-                    print('[RECEIVER]: Received ID is invalid. Closing the client')
+                    print(
+                        '[RECEIVER]: Received ID is invalid. Closing the client')
                     self.closeClient(informServer=True)
                     break
 
@@ -123,14 +129,24 @@ class Client:
                         f'[RECEIVER]: Server did not accept the format of the ID.')
                     self.__isSendingPrevented.store(0)
 
+                elif "newID" in message:
+                    newId = message[message.index('-') + 1:]
+                    print(f'[RECEIVER]: ID has been replaced by {newId}')
+                    self.__id = newId
+                    self.__window.setIdLabel(self.__id)
+
                 else:
                     print(
                         f'[RECEIVER]: Currently waiting for pop-up to be answered...')
                     answer = self.__window.popup(
                         f'Do you want to connect {message}? (yes/no)', 5000)
-                    print(f'[RECEIVER]: Pop-up has been answered -> {answer}')
+                    print(
+                        f'[RECEIVER]: Pop-up has been answered -> {answer}')
+
                     if answer == None:
                         self.__socket.send('no'.encode('utf-8'))
+
                     else:
                         self.__socket.send(answer.encode('utf-8'))
+
                     self.__isSendingPrevented.store(0)
