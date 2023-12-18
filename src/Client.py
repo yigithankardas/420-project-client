@@ -5,10 +5,11 @@ import signal
 from time import sleep
 import select
 import sys
+import random
 
 from ClientWindow import ClientWindow
 
-SOCKET_TIMEOUT = 5
+SOCKET_TIMEOUT = 1
 RECEIVER_THREAD_WAIT = 0.01
 
 
@@ -17,6 +18,10 @@ class Client:
         self.__host = host
         self.__port = port
         self.__id = -1
+        self.__p = -1
+        self.__g = -1
+        self.__privateKey = -1
+        self.__sessionKey = -1
         self.__state = 'waiting-id'
         self.__mustQuit = atomics.atomic(width=1, atype=atomics.UINT)
         self.__isSendingPrevented = atomics.atomic(width=1, atype=atomics.UINT)
@@ -27,6 +32,15 @@ class Client:
     def __signalHandler(self, sig, frame):
         print('\n[MAIN]: SIGINT received.')
         self.closeClient(informServer=True)
+
+    def __generatePrivateKey(self):
+        return random.randint(2, self.__p - 2)
+
+    def __calculatePublicKey(self):
+        return pow(self.__g, self.__privateKey, self.__p)
+
+    def __calculateSharedSecret(self, gB):
+        return pow(gB, self.__privateKey, self.__p)
 
     def process(self):
         signal.signal(signal.SIGINT, self.__signalHandler)
@@ -85,7 +99,7 @@ class Client:
         messages = []
         while self.__mustQuit.load() == 0:
             sleep(RECEIVER_THREAD_WAIT)
-            print(f'[RECEIVER]: Receiver thread is idle.')
+            # print(f'[RECEIVER]: Receiver thread is idle.')
 
             try:
                 bytes = self.__socket.recv(1024).decode()
@@ -104,6 +118,19 @@ class Client:
             if message == 'quit':
                 self.closeClient(informServer=False)
                 break
+
+            if 'G-' in message:
+                self.__g = int(message[message.index('-') + 1:])
+                print(f'[RECEIVER]: g has been received: {self.__g}')
+                continue
+
+            if 'P-' in message:
+                self.__p = int(message[message.index('-') + 1:])
+                print(f'[RECEIVER]: p has been received: {self.__p}')
+                continue
+
+            if self.__privateKey == -1 and self.__p != -1 and self.__g != -1:
+                self.__privateKey = self.__generatePrivateKey()
 
             if self.__state == 'waiting-id':
                 try:
@@ -135,6 +162,17 @@ class Client:
                     self.__id = newId
                     self.__window.setIdLabel(self.__id)
 
+                elif message == '1':
+                    # Other client said yes
+                    # Send gA
+                    self.__state = 'key-exchange'
+                    try:
+                        self.__socket.send(
+                            str(self.__calculatePublicKey()).encode('utf-8'))
+                    except:
+                        self.closeClient(informServer=False)
+                        break
+
                 else:
                     print(
                         f'[RECEIVER]: Currently waiting for pop-up to be answered...')
@@ -150,3 +188,11 @@ class Client:
                         self.__socket.send(answer.encode('utf-8'))
 
                     self.__isSendingPrevented.store(0)
+
+            elif self.__state == 'key-exchange':
+                # The message is gB
+                gB = int(message[message.index('-') + 1:])
+                self.__sessionKey = self.__calculateSharedSecret(gB)
+                print(f'[RECEIVER]: Session key: {self.__sessionKey}')
+                self.__state = 'in-session'
+                # Messaging screen
