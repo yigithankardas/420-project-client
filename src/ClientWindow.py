@@ -73,3 +73,7 @@ class ClientWindow:
 
     def setIdLabel(self, id):
         self.__idLabel.config(text=f'ID: {id}')
+        self.__chatWindow.setID(id)
+
+    def setSessionKey(self, sessionKey):
+        self.__chatWindow.setSessionKey(sessionKey)
