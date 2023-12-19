@@ -1,19 +1,48 @@
 from tkinter import *
 from TimeoutPopup import TimeoutPopup
+from ChatWindow import ChatWindow
+from datetime import datetime
 
 
 class ClientWindow:
     def __init__(self):
+        self.__currentFrame = 1
         self.__window = Tk()
-        self.__frame = Frame(self.__window)
+        self.__window.geometry('1000x400')
+        self.__window.configure(bg='#282828')
+
+        self.__frame1 = Frame(self.__window, bg='#282828')
+        self.__frame1.pack(expand=True, fill='both')
+
+        self.__frame2 = Frame(self.__window, bg='#282828')
+        self.__frame2.pack(expand=True, fill='both')
+        self.__chatWindow = ChatWindow(self.__frame2)
+
         self.__idLabel = Label(
-            self.__frame, text='ID: *', bg='black', fg='white')
-        self.__entry = Entry(self.__frame)
-        self.__button = Button(self.__frame, text='Send Request')
-        self.__idLabel.pack()
-        self.__entry.pack()
-        self.__button.pack()
-        self.__frame.pack()
+            self.__frame1, text='ID: *', bg='#282828', fg='white', font=('Helvetica', 16))
+        self.__idLabel.pack(pady=20)
+
+        self.__entry = Entry(self.__frame1, bg='#141414', fg='white',
+                             bd=2, relief='solid')
+        self.__entry.pack(pady=10, padx=20, ipady=5, fill='both')
+
+        self.__button = Button(
+            self.__frame1, text='Send Request', bg='#141414', fg='white', font=('Helvetica', 16))
+        self.__button.pack(pady=10)
+        self.__switchFrame()
+
+    def __switchFrame(self):
+        if self.__currentFrame == 1:
+            self.__frame1.pack_forget()
+        else:
+            self.__frame2.pack_forget()
+
+        self.__currentFrame = 3 - self.__currentFrame
+
+        if self.__currentFrame == 1:
+            self.__frame1.pack(expand=True, fill='both')
+        else:
+            self.__frame2.pack(expand=True, fill='both')
 
     def mainloop(self):
         self.__window.mainloop()

@@ -3,8 +3,6 @@ from threading import Thread, Lock
 import atomics
 import signal
 from time import sleep
-import select
-import sys
 import random
 
 from ClientWindow import ClientWindow
