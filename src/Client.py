@@ -5,8 +5,10 @@ import signal
 from time import sleep
 import random
 import pickle
+import sys
 
 from ClientWindow import ClientWindow
+from AESCipher import AESCipher
 
 SOCKET_TIMEOUT = 1
 RECEIVER_THREAD_WAIT = 0.01
@@ -100,32 +102,28 @@ class Client:
             # print(f'[RECEIVER]: Receiver thread is idle.')
 
             try:
-                bytes = self.__socket.recv(1024).decode()
-                if bytes == '':
+                bytes = self.__socket.recv(1024)
+                if len(bytes) == 0:
                     continue
 
-                messages += list(filter(None, bytes.split('\0')))
+                if self.__state == 'in-session':
+                    messages = bytes
+                else:
+                    messages += list(filter(None, bytes.decode().split('\0')))
 
                 print(f'[RECEIVER]: Messages received: {messages}')
             except:
                 if len(messages) == 0:
                     continue
 
-            message = messages.pop(0)
+            if self.__state == 'in-session':
+                message = messages
+            else:
+                message = messages.pop(0)
 
             if message == 'quit':
                 self.closeClient(informServer=False)
                 break
-
-            if 'G-' in message:
-                self.__g = int(message[message.index('-') + 1:])
-                print(f'[RECEIVER]: g has been received: {self.__g}')
-                continue
-
-            if 'P-' in message:
-                self.__p = int(message[message.index('-') + 1:])
-                print(f'[RECEIVER]: p has been received: {self.__p}')
-                continue
 
             if self.__privateKey == -1 and self.__p != -1 and self.__g != -1:
                 self.__privateKey = self.__generatePrivateKey()
@@ -145,7 +143,15 @@ class Client:
                 self.__window.setIdLabel(self.__id)
 
             elif self.__state == 'idle':
-                if message == '-1':
+                if 'G-' in message:
+                    self.__g = int(message[message.index('-') + 1:])
+                    print(f'[RECEIVER]: g has been received: {self.__g}')
+
+                elif 'P-' in message:
+                    self.__p = int(message[message.index('-') + 1:])
+                    print(f'[RECEIVER]: p has been received: {self.__p}')
+
+                elif message == '-1':
                     print('[RECEIVER]: Could not reach the client')
                     self.__isSendingPrevented.store(0)
 
@@ -190,14 +196,19 @@ class Client:
             elif self.__state == 'key-exchange':
                 # The message is gB
                 gB = int(message[message.index('-') + 1:])
-                self.__sessionKey = self.__calculateSharedSecret(gB)
+                self.__sessionKey = self.__calculateSharedSecret(gB).to_bytes(
+                    length=512, signed=False, byteorder=sys.byteorder)
                 print(f'[RECEIVER]: Session key: {self.__sessionKey}')
                 self.__state = 'in-session'
+                self.__window.setSessionKey(self.__sessionKey)
                 self.__window.switchFrame()
 
             elif self.__state == 'in-session':
-                # messageObject = pickle.load(message)
-                # decryptedText = decrypt(messageObject['text'])
-                # messageObject['text'] = decryptedText
-                # self.__window.renderReceivedMessage(messageObject)
-                pass
+                aes = AESCipher(self.__sessionKey)
+                messageObject = pickle.loads(message)
+                print(f'[RECEIVER]: messageObject: {messageObject}')
+                decryptedText = aes.decrypt(messageObject['text'])
+                print(f'[RECEIVER]: Decrypted text: {decryptedText}')
+                messageObject['text'] = decryptedText
+                self.__window.renderReceivedMessage(decryptedText)
+                messages = []

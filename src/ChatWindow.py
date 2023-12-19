@@ -2,12 +2,18 @@ import tkinter as tk
 from tkinter import scrolledtext, filedialog, font as tkfont
 from PIL import Image, ImageTk
 import socket
+from AESCipher import AESCipher
+import pickle
+from datetime import datetime
 
 
 class ChatWindow:
     def __init__(self, master, socket: socket.socket):
         self.__master = master
-
+        self.__socket = socket
+        self.__id = -1
+        self.__sessionKey = None
+        self.__aes = None
         self.__font = tkfont.Font(family="Helvetica", size=12)
         self.__chatArea = scrolledtext.ScrolledText(
             master, state='disabled', wrap=tk.WORD, font=self.__font, bg="#282828")
@@ -34,17 +40,43 @@ class ChatWindow:
         self.__master.grid_rowconfigure(0, weight=1)
         self.__master.grid_columnconfigure(0, weight=1)
 
+    def setSessionKey(self, sessionKey):
+        self.__sessionKey = sessionKey
+        self.__aes = AESCipher(self.__sessionKey)
+
+    def setID(self, id):
+        self.__id = id
+
     def __sendMessage(self, event):
-        message = self.__entry.get()
-        if len(message) == 0:
+        if self.__aes == None:
+            print('[GUI]: Session key has not been set.')
             return
 
-        if message:
-            self.__updateChatArea(message, "right")
-            self.__entry.delete(0, tk.END)
-        # Encrypt the message and send it
+        plainText = self.__entry.get()
+        if len(plainText) == 0:
+            return
+
+        cipherText = self.__aes.encrypt(plainText)
+        messageObject = {
+            'text': cipherText,
+            'date': datetime.now(),
+            'id': self.__id
+        }
+        serializedMessage = pickle.dumps(messageObject)
+        try:
+            self.__socket.send(serializedMessage)
+        except:
+            print('[GUI]: Could not send the message.')
+            return
+
+        self.__updateChatArea(plainText, "right")
+        self.__entry.delete(0, tk.END)
 
     def __sendPhoto(self):
+        if self.__aes == None:
+            print('[GUI]: Session key has not been set.')
+            return
+
         file_path = filedialog.askopenfilename()
         if not file_path:
             return
