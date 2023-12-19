@@ -5,8 +5,8 @@ from datetime import datetime
 
 
 class ClientWindow:
-    def __init__(self):
-        self.__currentFrame = 1
+    def __init__(self, socket):
+        self.__currentFrame = 2
         self.__window = Tk()
         self.__window.geometry('1000x400')
         self.__window.configure(bg='#282828')
@@ -16,7 +16,7 @@ class ClientWindow:
 
         self.__frame2 = Frame(self.__window, bg='#282828')
         self.__frame2.pack(expand=True, fill='both')
-        self.__chatWindow = ChatWindow(self.__frame2)
+        self.__chatWindow = ChatWindow(self.__frame2, socket)
 
         self.__idLabel = Label(
             self.__frame1, text='ID: *', bg='#282828', fg='white', font=('Helvetica', 16))
@@ -29,9 +29,9 @@ class ClientWindow:
         self.__button = Button(
             self.__frame1, text='Send Request', bg='#141414', fg='white', font=('Helvetica', 16))
         self.__button.pack(pady=10)
-        self.__switchFrame()
+        self.switchFrame()
 
-    def __switchFrame(self):
+    def switchFrame(self):
         if self.__currentFrame == 1:
             self.__frame1.pack_forget()
         else:
@@ -43,6 +43,9 @@ class ClientWindow:
             self.__frame1.pack(expand=True, fill='both')
         else:
             self.__frame2.pack(expand=True, fill='both')
+
+    def renderReceivedMessage(self, message):
+        self.__chatWindow.receiveMessage(message)
 
     def mainloop(self):
         self.__window.mainloop()
