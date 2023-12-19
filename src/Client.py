@@ -3,9 +3,8 @@ from threading import Thread, Lock
 import atomics
 import signal
 from time import sleep
-import select
-import sys
 import random
+import pickle
 
 from ClientWindow import ClientWindow
 
@@ -48,8 +47,7 @@ class Client:
         self.__socket.settimeout(SOCKET_TIMEOUT)
         self.__mustQuit.store(0)
         self.__isSendingPrevented.store(0)
-        self.__window = None
-        self.__window = ClientWindow()
+        self.__window = ClientWindow(self.__socket)
         self.__window.registerOnClick(lambda event: self.__onClick())
         self.__window.after(500, self.__check)
         self.__receiverThread = Thread(target=self.__receiver, args=())
@@ -195,4 +193,11 @@ class Client:
                 self.__sessionKey = self.__calculateSharedSecret(gB)
                 print(f'[RECEIVER]: Session key: {self.__sessionKey}')
                 self.__state = 'in-session'
-                # Messaging screen
+                self.__window.switchFrame()
+
+            elif self.__state == 'in-session':
+                # messageObject = pickle.load(message)
+                # decryptedText = decrypt(messageObject['text'])
+                # messageObject['text'] = decryptedText
+                # self.__window.renderReceivedMessage(messageObject)
+                pass
