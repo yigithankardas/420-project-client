@@ -11,7 +11,7 @@ from ClientWindow import ClientWindow
 from AESCipher import AESCipher
 from tkinter import messagebox
 
-SOCKET_TIMEOUT = 1
+SOCKET_TIMEOUT = 0.5
 RECEIVER_THREAD_WAIT = 0.01
 
 
@@ -27,6 +27,7 @@ class Client:
         self.__state = 'waiting-id'
         self.__mustQuit = atomics.atomic(width=1, atype=atomics.UINT)
         self.__isSendingPrevented = atomics.atomic(width=1, atype=atomics.UINT)
+        self.__canRead = atomics.atomic(width=1, atype=atomics.UINT)
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__receiverThread = None
         self.__window = None
@@ -50,7 +51,8 @@ class Client:
         self.__socket.settimeout(SOCKET_TIMEOUT)
         self.__mustQuit.store(0)
         self.__isSendingPrevented.store(0)
-        self.__window = ClientWindow(self.__socket)
+        self.__canRead.store(1)
+        self.__window = ClientWindow(self.__socket, self.__canRead)
         self.__window.registerOnClick(self.__onClick)
         self.__window.registerOnExit(self.__onExit)
         self.__window.after(500, self.__check)
@@ -113,13 +115,24 @@ class Client:
         while self.__mustQuit.load() == 0:
             sleep(RECEIVER_THREAD_WAIT)
 
+            if self.__canRead.load() != 1:
+                continue
+
             try:
-                bytes = self.__socket.recv(200000)
+                bytes = self.__socket.recv(4096)
                 if len(bytes) == 0:
                     continue
 
                 if self.__state == 'in-session':
-                    messages = bytes
+                    if bytes == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00':
+                        self.__socket.send(
+                            b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+                        for _ in range(11):
+                            messages.append(self.__socket.recv(20000))
+                            self.__socket.send(
+                                b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+                    else:
+                        messages = bytes
                 else:
                     messages += list(filter(None, bytes.decode().split('\0')))
 
@@ -129,7 +142,12 @@ class Client:
                     continue
 
             if self.__state == 'in-session':
-                message = messages
+                if type(messages) == list:
+                    message = b''
+                    for element in messages:
+                        message += element
+                else:
+                    message = messages
             else:
                 message = messages.pop(0)
 
@@ -222,6 +240,7 @@ class Client:
                     messages = []
                     self.__isSendingPrevented.store(0)
                     continue
+
                 aes = AESCipher(self.__sessionKey)
                 try:
                     messageObject = pickle.loads(message)

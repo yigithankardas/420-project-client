@@ -6,16 +6,19 @@ from AESCipher import AESCipher
 import pickle
 from datetime import datetime
 import os
+from time import sleep
 
 
 class ChatWindow:
-    def __init__(self, master, socket: socket.socket):
+    def __init__(self, master, socket: socket.socket, canClientRead):
         self.__master = master
         self.__socket = socket
         self.__id = -1
         self.__sessionKey = None
         self.__images = []
         self.__aes = None
+
+        self.__canClientRead = canClientRead
 
         self.__font = tkfont.Font(family="Helvetica", size=12)
         self.__chatArea = scrolledtext.ScrolledText(
@@ -93,6 +96,8 @@ class ChatWindow:
         if not file_path:
             return
 
+        self.__canClientRead.store(0)
+        sleep(0.4)
         image = Image.open(file_path)
         image.thumbnail((200, 200))
         imageBytes = image.tobytes()
@@ -107,12 +112,29 @@ class ChatWindow:
             'id': self.__id
         }
         serializedMessage = pickle.dumps(messageObject)
+
+        chunkSize = len(serializedMessage) // 10
+        mod = len(serializedMessage) % 10
+        chunks = [serializedMessage[i:i+chunkSize]
+                  for i in range(0, len(serializedMessage), chunkSize)]
+        if mod != 0:
+            chunks[len(chunks) - 1] += serializedMessage[len(
+                serializedMessage)-mod-1:len(serializedMessage)]
+
         try:
-            self.__socket.send(serializedMessage)
+            self.__socket.send(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+            self.__socket.recv(200)
+            for chunk in chunks:
+                self.__socket.send(chunk)
+                self.__socket.recv(200)
+
         except:
             print('[GUI]: Could not send the image.')
+            self.__canClientRead.store(1)
             return
 
+        self.__canClientRead.store(1)
+        self.__entry.delete(0, tk.END)
         self.__displayImage(image, "right")
 
     def __displayImage(self, image, side):

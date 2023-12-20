@@ -4,7 +4,7 @@ from ChatWindow import ChatWindow
 
 
 class ClientWindow:
-    def __init__(self, socket):
+    def __init__(self, socket, canClientRead):
         self.__currentFrame = 2
         self.__window = Tk()
         self.__window.geometry('1000x400')
@@ -15,7 +15,7 @@ class ClientWindow:
 
         self.__frame2 = Frame(self.__window, bg='#282828')
         self.__frame2.pack(expand=True, fill='both')
-        self.__chatWindow = ChatWindow(self.__frame2, socket)
+        self.__chatWindow = ChatWindow(self.__frame2, socket, canClientRead)
 
         self.__idLabel = Label(
             self.__frame1, text='ID: *', bg='#282828', fg='white', font=('Helvetica', 16))
