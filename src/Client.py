@@ -112,7 +112,6 @@ class Client:
         messages = []
         while self.__mustQuit.load() == 0:
             sleep(RECEIVER_THREAD_WAIT)
-            # print(f'[RECEIVER]: Receiver thread is idle.')
 
             try:
                 bytes = self.__socket.recv(130000)
@@ -210,7 +209,7 @@ class Client:
                 gB = int(message[message.index('-') + 1:])
                 self.__sessionKey = self.__calculateSharedSecret(gB).to_bytes(
                     length=512, signed=False, byteorder=sys.byteorder)
-                print(f'[RECEIVER]: Session key: {self.__sessionKey}')
+                print(f'[RECEIVER]: Session key has been generated.')
                 self.__state = 'in-session'
                 self.__window.setSessionKey(self.__sessionKey)
                 self.__window.switchFrame()

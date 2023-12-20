@@ -16,7 +16,7 @@ class ChatWindow:
         self.__sessionKey = None
         self.__images = []
         self.__aes = None
-        
+
         self.__font = tkfont.Font(family="Helvetica", size=12)
         self.__chatArea = scrolledtext.ScrolledText(
             master, state='disabled', wrap=tk.WORD, font=self.__font, bg="#282828")
@@ -33,11 +33,11 @@ class ChatWindow:
         self.__entry.grid(row=1, column=0, sticky="ew")
 
         self.__sendButton = tk.Button(
-            master, text="Gönder", command=lambda: self.__sendMessage(None), bg='#0052cc', fg='white')  # Mavi renk
+            master, text="Send", command=lambda: self.__sendMessage(None), bg='#0052cc', fg='white')  # Mavi renk
         self.__sendButton.grid(row=1, column=1)
 
         self.__photoButton = tk.Button(
-            master, text="Fotoğraf Gönder", command=self.__sendImage, bg='#4CAF50', fg='white')  # Yeşil renk
+            master, text="Send Image", command=self.__sendImage, bg='#4CAF50', fg='white')  # Yeşil renk
         self.__photoButton.grid(row=1, column=2)
 
         self.__master.grid_rowconfigure(0, weight=1)
@@ -57,7 +57,7 @@ class ChatWindow:
 
     def __sendMessage(self, event):
         if self.__aes == None:
-            print('[GUI]: Session key has not been set.')
+            print('[GUI]: Session key is not set.')
             return
 
         plainText = self.__entry.get()
@@ -86,7 +86,7 @@ class ChatWindow:
 
     def __sendImage(self):
         if self.__aes == None:
-            print('[GUI]: Session key has not been set.')
+            print('[GUI]: Session key is not set.')
             return
 
         file_path = filedialog.askopenfilename()
