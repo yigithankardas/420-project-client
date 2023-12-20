@@ -16,12 +16,15 @@ class AESCipher:
         ).derive(sessionKey)
 
     def encrypt(self, plaintext):
+        if type(plaintext) == str:
+            plaintext = plaintext.encode('utf-8')
+
         iv = os.urandom(16)
         cipher = Cipher(algorithms.AES(self.key),
                         modes.CFB(iv), backend=default_backend())
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(
-            plaintext.encode()) + encryptor.finalize()
+            plaintext) + encryptor.finalize()
         return iv + ciphertext
 
     def decrypt(self, ciphertext):
@@ -30,4 +33,4 @@ class AESCipher:
                         modes.CFB(iv), backend=default_backend())
         decryptor = cipher.decryptor()
         plaintext = decryptor.update(ciphertext[16:]) + decryptor.finalize()
-        return plaintext.decode()
+        return plaintext

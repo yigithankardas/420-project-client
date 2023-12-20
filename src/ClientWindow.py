@@ -43,9 +43,13 @@ class ClientWindow:
             self.__frame1.pack(expand=True, fill='both')
         else:
             self.__frame2.pack(expand=True, fill='both')
+        self.__chatWindow.resetChatAreas()
 
     def renderReceivedMessage(self, message):
         self.__chatWindow.receiveMessage(message)
+
+    def renderReceivedImage(self, image, witdh, height, isPNG):
+        self.__chatWindow.receiveImage(image, witdh, height, isPNG)
 
     def mainloop(self):
         self.__window.mainloop()

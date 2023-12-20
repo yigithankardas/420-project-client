@@ -88,6 +88,10 @@ class Client:
             return
 
         requestedId = self.__window.getEntryText()
+        if requestedId == self.__id:
+            print('[WINDOW]: Cannot make a request to itself')
+            return
+
         try:
             self.__socket.send(requestedId.encode('utf-8'))
             print('[WINDOW]: Message has been successfuly sent.')
@@ -102,7 +106,7 @@ class Client:
             # print(f'[RECEIVER]: Receiver thread is idle.')
 
             try:
-                bytes = self.__socket.recv(1024)
+                bytes = self.__socket.recv(130000)
                 if len(bytes) == 0:
                     continue
 
@@ -176,7 +180,6 @@ class Client:
                     except:
                         self.closeClient(informServer=False)
                         break
-
                 else:
                     print(
                         f'[RECEIVER]: Currently waiting for pop-up to be answered...')
@@ -204,11 +207,19 @@ class Client:
                 self.__window.switchFrame()
 
             elif self.__state == 'in-session':
+                if message == b'disconnected\x00':
+                    self.__state = 'idle'
+                    self.__sessionKey = -1
+                    self.__window.switchFrame()
+                    messages = []
+                    self.__isSendingPrevented.store(0)
+                    continue
                 aes = AESCipher(self.__sessionKey)
                 messageObject = pickle.loads(message)
-                print(f'[RECEIVER]: messageObject: {messageObject}')
                 decryptedText = aes.decrypt(messageObject['text'])
-                print(f'[RECEIVER]: Decrypted text: {decryptedText}')
-                messageObject['text'] = decryptedText
-                self.__window.renderReceivedMessage(decryptedText)
+                if messageObject['isImage']:
+                    self.__window.renderReceivedImage(
+                        decryptedText, messageObject['imageWidth'], messageObject['imageHeight'], messageObject['isPNG'])
+                else:
+                    self.__window.renderReceivedMessage(decryptedText.decode())
                 messages = []
