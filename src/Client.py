@@ -131,7 +131,7 @@ class Client:
                         if control == bytes:
                             self.__socket.send(bytes)
                             for _ in range(len(bytes)):
-                                messages.append(self.__socket.recv(2100))
+                                messages.append(self.__socket.recv(2000))
                                 self.__socket.send(bytes)
                         else:
                             messages = bytes

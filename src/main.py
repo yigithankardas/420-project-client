@@ -3,7 +3,7 @@ if __name__ != '__main__':
 
 from Client import Client
 
-HOST = '10.3.192.133'
+HOST = '127.0.0.1'
 PORT = 5555
 
 client = Client(HOST, PORT)

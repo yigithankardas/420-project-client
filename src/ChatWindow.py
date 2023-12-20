@@ -137,10 +137,10 @@ class ChatWindow:
                 chunkCountBytes += b'\x00'
 
             self.__socket.send(chunkCountBytes)
-            self.__socket.recv(200)
+            self.__socket.recv(len(chunkCountBytes))
             for chunk in chunks:
                 self.__socket.send(chunk)
-                self.__socket.recv(200)
+                self.__socket.recv(len(chunkCountBytes))
 
         except:
             print('[GUI]: Could not send the image.')
