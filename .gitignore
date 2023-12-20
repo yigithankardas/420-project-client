@@ -1,0 +1,4 @@
+dist/
+bin/
+output/
+__pycache__/
