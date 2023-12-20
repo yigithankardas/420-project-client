@@ -94,7 +94,7 @@ class Client:
             return
 
         requestedId = self.__window.getEntryText()
-        if requestedId == self.__id:
+        if requestedId == str(self.__id):
             print('[WINDOW]: Cannot make a request to itself')
             return
 
