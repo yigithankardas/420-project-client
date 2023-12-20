@@ -9,15 +9,19 @@ class TimeoutPopup(Tk):
         self.__result = None
 
         self.__frame = Frame(self)
-        self.__label = Label(self.__frame, text=message)
+        self.__label = Label(self.__frame, text=message, font=("Helvetica", 14))
         self.__label.pack(padx=10, pady=10)
 
-        self.__yesButton = Button(
-            self.__frame, text="Yes", command=self.__onYes)
-        self.__yesButton.pack(side=LEFT, padx=10)
+        # Butonlar için Helvetica yazı tipi ve diğer stil ayarları
+        button_style_yes = {"font": ("Helvetica", 14), "bg": "#4CAF50", "fg": "white", "bd": 0, "relief": FLAT}
+        button_style_no = {"font": ("Helvetica", 14), "bg": "#ff0000", "fg": "white", "bd": 0, "relief": FLAT}
 
-        self.__noButton = Button(self.__frame, text="No", command=self.__onNo)
-        self.__noButton.pack(side=LEFT, padx=10)
+        self.__yesButton = Button(self.__frame, text="Yes", command=self.__onYes, **button_style_yes)
+        self.__yesButton.pack(side=LEFT, padx=10, pady=5)
+
+        self.__noButton = Button(self.__frame, text="No", command=self.__onNo, **button_style_no)  # Kırmızı renk için #ff0000 kullanıldı
+        self.__noButton.pack(side=RIGHT, padx=10, pady=5)
+
         self.__frame.pack()
 
         self.__after = self.after(timeout, self.__onTimeout)
