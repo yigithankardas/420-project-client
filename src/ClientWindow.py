@@ -69,6 +69,9 @@ class ClientWindow:
     def registerOnClick(self, function):
         self.__button.bind('<Button-1>', function)
 
+    def registerOnExit(self, function):
+        self.__window.wm_protocol("WM_DELETE_WINDOW", function)
+
     def popup(self, message, timeout):
         popup = TimeoutPopup('Confirmation',
                              message, timeout)
