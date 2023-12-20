@@ -1,7 +1,6 @@
 from tkinter import *
 from TimeoutPopup import TimeoutPopup
 from ChatWindow import ChatWindow
-from datetime import datetime
 
 
 class ClientWindow:

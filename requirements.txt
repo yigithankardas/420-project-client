@@ -1,1 +1,4 @@
-tk=0.1.0
+atomics==1.0.2
+cryptography==41.0.7
+Pillow==10.1.0
+tk==0.1.0
