@@ -114,7 +114,7 @@ class Client:
             sleep(RECEIVER_THREAD_WAIT)
 
             try:
-                bytes = self.__socket.recv(130000)
+                bytes = self.__socket.recv(200000)
                 if len(bytes) == 0:
                     continue
 
@@ -123,7 +123,7 @@ class Client:
                 else:
                     messages += list(filter(None, bytes.decode().split('\0')))
 
-                print(f'[RECEIVER]: Messages received: {messages}')
+                print(f'[RECEIVER]: Messages received.')
             except:
                 if len(messages) == 0:
                     continue
@@ -223,7 +223,14 @@ class Client:
                     self.__isSendingPrevented.store(0)
                     continue
                 aes = AESCipher(self.__sessionKey)
-                messageObject = pickle.loads(message)
+                try:
+                    messageObject = pickle.loads(message)
+                except:
+                    print(
+                        '[RECEIVER]: pickle data was truncated. Could not load the image.')
+                    messages = []
+                    continue
+
                 decryptedText = aes.decrypt(messageObject['text'])
                 if messageObject['isImage']:
                     self.__window.renderReceivedImage(
