@@ -124,13 +124,17 @@ class Client:
                     continue
 
                 if self.__state == 'in-session':
-                    if bytes == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00':
-                        self.__socket.send(
-                            b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-                        for _ in range(11):
-                            messages.append(self.__socket.recv(20000))
-                            self.__socket.send(
-                                b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+                    if b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' in bytes:
+                        control = b''
+                        for _ in range(len(bytes)):
+                            control += b'\x00'
+                        if control == bytes:
+                            self.__socket.send(bytes)
+                            for _ in range(len(bytes)):
+                                messages.append(self.__socket.recv(2100))
+                                self.__socket.send(bytes)
+                        else:
+                            messages = bytes
                     else:
                         messages = bytes
                 else:

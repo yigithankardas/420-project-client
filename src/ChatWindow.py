@@ -113,16 +113,30 @@ class ChatWindow:
         }
         serializedMessage = pickle.dumps(messageObject)
 
-        chunkSize = len(serializedMessage) // 10
-        mod = len(serializedMessage) % 10
-        chunks = [serializedMessage[i:i+chunkSize]
-                  for i in range(0, len(serializedMessage), chunkSize)]
-        if mod != 0:
-            chunks[len(chunks) - 1] += serializedMessage[len(
-                serializedMessage)-mod-1:len(serializedMessage)]
+        chunkSize = 2000
+        chunkCount = 10
+        if len(serializedMessage) // 2000 < 10:
+            mod = len(serializedMessage) % 10
+            chunks = [serializedMessage[i:i+chunkSize]
+                      for i in range(0, len(serializedMessage), chunkSize)]
+            if mod != 0:
+                chunks[len(chunks) - 1] += serializedMessage[len(
+                    serializedMessage)-mod-1:len(serializedMessage)]
+        else:
+            chunkCount = len(serializedMessage) // 2000
+            mod = len(serializedMessage) % chunkCount
+            chunks = [serializedMessage[i:i+chunkSize]
+                      for i in range(0, len(serializedMessage), chunkSize)]
+            if mod != 0:
+                chunks[len(chunks) - 1] += serializedMessage[len(
+                    serializedMessage)-mod-1:len(serializedMessage)]
 
         try:
-            self.__socket.send(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+            chunkCountBytes = b''
+            for _ in range(chunkCount + 1):
+                chunkCountBytes += b'\x00'
+
+            self.__socket.send(chunkCountBytes)
             self.__socket.recv(200)
             for chunk in chunks:
                 self.__socket.send(chunk)
