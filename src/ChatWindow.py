@@ -16,13 +16,14 @@ class ChatWindow:
         self.__sessionKey = None
         self.__images = []
         self.__aes = None
+        
         self.__font = tkfont.Font(family="Helvetica", size=12)
         self.__chatArea = scrolledtext.ScrolledText(
             master, state='disabled', wrap=tk.WORD, font=self.__font, bg="#282828")
         self.__chatArea.tag_configure(
-            "left", justify="left", background="#3c3c3c", lmargin1=20, lmargin2=20, rmargin=60)
+            "left", justify="left", background="#C5D8A5", lmargin1=20, lmargin2=20, rmargin=60)
         self.__chatArea.tag_configure(
-            "right", justify="right", background="#128C7E", lmargin1=60, lmargin2=20, rmargin=20)
+            "right", justify="right", background="#3EC7B7", lmargin1=60, lmargin2=20, rmargin=20)
 
         self.__chatArea.grid(row=0, column=0, columnspan=3, sticky="nsew")
 
@@ -32,11 +33,11 @@ class ChatWindow:
         self.__entry.grid(row=1, column=0, sticky="ew")
 
         self.__sendButton = tk.Button(
-            master, text="Gönder", command=lambda: self.__sendMessage(None), bg='#141414', fg='white')
+            master, text="Gönder", command=lambda: self.__sendMessage(None), bg='#0052cc', fg='white')  # Mavi renk
         self.__sendButton.grid(row=1, column=1)
 
         self.__photoButton = tk.Button(
-            master, text="Fotoğraf Gönder", command=self.__sendImage, bg='#141414', fg='white')
+            master, text="Fotoğraf Gönder", command=self.__sendImage, bg='#4CAF50', fg='white')  # Yeşil renk
         self.__photoButton.grid(row=1, column=2)
 
         self.__master.grid_rowconfigure(0, weight=1)
