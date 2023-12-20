@@ -5,6 +5,7 @@ import socket
 from AESCipher import AESCipher
 import pickle
 from datetime import datetime
+import os
 
 
 class ChatWindow:
@@ -13,6 +14,7 @@ class ChatWindow:
         self.__socket = socket
         self.__id = -1
         self.__sessionKey = None
+        self.__images = []
         self.__aes = None
         self.__font = tkfont.Font(family="Helvetica", size=12)
         self.__chatArea = scrolledtext.ScrolledText(
@@ -34,7 +36,7 @@ class ChatWindow:
         self.__sendButton.grid(row=1, column=1)
 
         self.__photoButton = tk.Button(
-            master, text="Fotoğraf Gönder", command=self.__sendPhoto, bg='#141414', fg='white')
+            master, text="Fotoğraf Gönder", command=self.__sendImage, bg='#141414', fg='white')
         self.__photoButton.grid(row=1, column=2)
 
         self.__master.grid_rowconfigure(0, weight=1)
@@ -43,6 +45,11 @@ class ChatWindow:
     def setSessionKey(self, sessionKey):
         self.__sessionKey = sessionKey
         self.__aes = AESCipher(self.__sessionKey)
+
+    def resetChatAreas(self):
+        self.__chatArea.configure(state='normal')
+        self.__chatArea.delete("1.0", tk.END)
+        self.__chatArea.configure(state='disabled')
 
     def setID(self, id):
         self.__id = id
@@ -59,6 +66,10 @@ class ChatWindow:
         cipherText = self.__aes.encrypt(plainText)
         messageObject = {
             'text': cipherText,
+            'isImage': False,
+            'imageWidth': 0,
+            'imageHeight': 0,
+            'isPNG': False,
             'date': datetime.now(),
             'id': self.__id
         }
@@ -72,7 +83,7 @@ class ChatWindow:
         self.__updateChatArea(plainText, "right")
         self.__entry.delete(0, tk.END)
 
-    def __sendPhoto(self):
+    def __sendImage(self):
         if self.__aes == None:
             print('[GUI]: Session key has not been set.')
             return
@@ -80,12 +91,30 @@ class ChatWindow:
         file_path = filedialog.askopenfilename()
         if not file_path:
             return
-        self.__displayPhoto(file_path, "right")
-        # Encrypt the photo and send it
 
-    def __displayPhoto(self, file_path, side):
         image = Image.open(file_path)
         image.thumbnail((200, 200))
+        imageBytes = image.tobytes()
+        cipherText = self.__aes.encrypt(imageBytes)
+        messageObject = {
+            'text': cipherText,
+            'isImage': True,
+            'imageWidth': image.width,
+            'imageHeight': image.height,
+            'isPNG': True if os.path.splitext(file_path)[1] == '.png' else False,
+            'date': datetime.now(),
+            'id': self.__id
+        }
+        serializedMessage = pickle.dumps(messageObject)
+        try:
+            self.__socket.send(serializedMessage)
+        except:
+            print('[GUI]: Could not send the image.')
+            return
+
+        self.__displayImage(image, "right")
+
+    def __displayImage(self, image, side):
         photo = ImageTk.PhotoImage(image)
 
         self.__chatArea.configure(state='normal')
@@ -94,11 +123,11 @@ class ChatWindow:
             padding = " " * 10
             self.__chatArea.insert(tk.END, padding, side)
 
-        self.__chatArea.image_create(tk.END, image=photo, padx=10, pady=10)
+        self.__chatArea.image_create(tk.END, image=photo)
         self.__chatArea.insert(tk.END, "\n", side)
         self.__chatArea.configure(state='disabled')
         self.__chatArea.yview(tk.END)
-        self.__chatArea.image = photo
+        self.__images.append(photo)
 
     def __updateChatArea(self, message, side):
         self.__chatArea.configure(state='normal')
@@ -108,3 +137,10 @@ class ChatWindow:
 
     def receiveMessage(self, message):
         self.__updateChatArea(message, "left")
+
+    def receiveImage(self, imageBytes, width, height, isPNG):
+        if isPNG:
+            image = Image.frombytes('RGBA', (width, height), imageBytes)
+        else:
+            image = Image.frombytes('RGB', (width, height), imageBytes)
+        self.__displayImage(image, 'left')
