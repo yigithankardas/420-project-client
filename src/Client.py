@@ -9,6 +9,7 @@ import sys
 
 from ClientWindow import ClientWindow
 from AESCipher import AESCipher
+from tkinter import messagebox
 
 SOCKET_TIMEOUT = 1
 RECEIVER_THREAD_WAIT = 0.01
@@ -50,7 +51,8 @@ class Client:
         self.__mustQuit.store(0)
         self.__isSendingPrevented.store(0)
         self.__window = ClientWindow(self.__socket)
-        self.__window.registerOnClick(lambda event: self.__onClick())
+        self.__window.registerOnClick(self.__onClick)
+        self.__window.registerOnExit(self.__onExit)
         self.__window.after(500, self.__check)
         self.__receiverThread = Thread(target=self.__receiver, args=())
         self.__receiverThread.start()
@@ -81,7 +83,11 @@ class Client:
     def __check(self):
         self.__window.after(500, self.__check)
 
-    def __onClick(self):
+    def __onExit(self):
+        if messagebox.askyesno("Exit", "Do you want to quit the application?"):
+            self.closeClient(informServer=True)
+
+    def __onClick(self, event):
         if self.__isSendingPrevented.load() == 1:
             print(
                 f'[WINDOW]: Sending is restricted. __isSendingPrevented: {self.__isSendingPrevented.load()}')
@@ -90,6 +96,9 @@ class Client:
         requestedId = self.__window.getEntryText()
         if requestedId == self.__id:
             print('[WINDOW]: Cannot make a request to itself')
+            return
+
+        if len(requestedId) == 0:
             return
 
         try:
